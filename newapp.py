@@ -11,7 +11,7 @@ external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 
 
-df = pd.read_csv(r'dft-road-casualty-statistics-accident-2020.csv', delimiter=',')
+df = pd.read_csv(r'decoded-dft-road-casualty-statistics-accident-2020.csv', delimiter=',')
 
 df = df[df["number_of_casualties"] > 2]
 df = df[df["weather_conditions"] != 9]
@@ -25,7 +25,15 @@ fig = px.bar(df, x="day_of_week", y="number_of_casualties", color = 'number_of_c
                 labels={'number_of_casualties':'Number of Casualties', 'day_of_week' : 'Day of the Week: Monday to Sunday'}, title="dis")
 
 fig2 = px.scatter(df, x="weather_conditions", y="number_of_casualties", color = 'number_of_casualties',
-                labels={'number_of_casualties':'Number of Casualties', 'day_of_week' : 'Day of the Week: Monday to Sunday'}, title="dis")
+                title="dis",
+                labels={'number_of_casualties':'Number of Casualties', 'weather_conditions' : 'Weather Conditions'})
+
+fig2.update_layout(legend=dict(
+    yanchor="top",
+    y=0.99,
+    xanchor="left",
+    x=0.01
+))
 
 fig3 = px.bar(dff, x="AgeBand", y="BloodAlcoholLevel(mg/100ml)", 
                   color="SexOfCasualty", barmode="group")
