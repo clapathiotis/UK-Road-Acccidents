@@ -10,14 +10,25 @@ external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 
-# assume you have a "long-form" data frame
-# see https://plotly.com/python/px-arguments/ for more options
+
 df = pd.read_csv(r'dft-road-casualty-statistics-accident-2020.csv', delimiter=',')
 
 df = df[df["number_of_casualties"] > 2]
+df = df[df["weather_conditions"] != 9]
+df = df[df["weather_conditions"] != -1]
+df = df[df["weather_conditions"] != 8]
+
+dff = pd.read_csv(r'BloodAlcoholContent_CoronersData2009.csv', delimiter=',', low_memory=False)
+
 
 fig = px.bar(df, x="day_of_week", y="number_of_casualties", color = 'number_of_casualties',
                 labels={'number_of_casualties':'Number of Casualties', 'day_of_week' : 'Day of the Week: Monday to Sunday'}, title="dis")
+
+fig2 = px.scatter(df, x="weather_conditions", y="number_of_casualties", color = 'number_of_casualties',
+                labels={'number_of_casualties':'Number of Casualties', 'day_of_week' : 'Day of the Week: Monday to Sunday'}, title="dis")
+
+fig3 = px.bar(dff, x="AgeBand", y="BloodAlcoholLevel(mg/100ml)", 
+                  color="SexOfCasualty", barmode="group")
 
 app.layout = html.Div(children=[
     # All elements from the top of the page
@@ -43,7 +54,7 @@ app.layout = html.Div(children=[
 
             dcc.Graph(
                 id='graph2',
-                figure=fig
+                figure=fig2
             ),  
         ], className='six columns'),
     ], className='row'),
@@ -57,7 +68,7 @@ app.layout = html.Div(children=[
 
         dcc.Graph(
             id='graph3',
-            figure=fig
+            figure=fig3
         ),  
     ], className='row'),
 ])
