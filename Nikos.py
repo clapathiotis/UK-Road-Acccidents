@@ -2,7 +2,6 @@ import json
 import numpy as np
 import pandas as pd
 import plotly.express as px
-import matplotlib.pyplot as plt
 import dash
 from dash import dcc
 from dash import html
@@ -87,7 +86,7 @@ def update_graph(view_value):
         df3 = df3.loc[df3['accident_severity'] == 'Fatal']
 
 
-        fig = px.choropleth(df3, locations='id', geojson=uk_local, color='Percentage', hover_data=['local_authority_district'])
+        fig = px.choropleth(df3, locations='id', geojson=uk_local, color='Percentage', hover_data=['local_authority_district'], scope='europe')
         fig.update_geos(fitbounds='locations', visible=False)
 
     return fig
