@@ -26,6 +26,7 @@ for feature in uk_local['features']:
 
 csv_file = 'decoded-dft-road-casualty-statistics-accident-2020.csv'
 df = pd.read_csv(csv_file, low_memory=False)
+df=df[df["number_of_casualties"]>2]
 # df = pd.read_csv(csv_file, nrows=10000) # use this line if you want to only experiment with a small sample of the dataset
 df['id'] = df['local_authority_district'].apply(lambda x: counties_map[x] if x in counties_map.keys() else pd.NA)
 df = df.dropna(subset=['id'])
@@ -51,10 +52,12 @@ fig.update_geos(fitbounds='locations', visible=False)
 available_indicators = ['Count', 'Fatal Accidents Percentage']
 app.layout = html.Div(children=[
     # All elements from the top of the page
-    
-    html.Div([
+    dcc.Loading(id = "loading-icon",
+                children=[
+                html.Div([
         
         html.Div([
+            
             dcc.Dropdown(
                 id='view',
                 options=[{'label': i, 'value': i} for i in available_indicators],
@@ -69,11 +72,14 @@ app.layout = html.Div(children=[
                     'height': '110vh'
                 }
             ),  
-        ], className='six columns')], className='row')
+        ], className='six columns')], className='row')], 
+        type="graph"),
+    
+        
         ])
-
 @app.callback(
     Output('graph1', 'figure'),
+    
     Input('view', 'value'))
 def update_graph(view_value):
     if view_value == 'Count':
