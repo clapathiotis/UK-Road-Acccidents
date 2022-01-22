@@ -10,4 +10,8 @@ def get_data():
     df = df[df["number_of_casualties"]>1]
     df = df[df["weather_conditions"] != "Other"]
     df = df[df["weather_conditions"] != "Unknown"]
+
+    # For counts of accidents per weather condition
+    Fog_count = (df.weather_conditions == "Fog or mist").sum() #this does nothing here just an example
+    print (Fog_count) # same here, its an example
     return df
