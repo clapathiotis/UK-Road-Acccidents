@@ -14,7 +14,7 @@ from dash import html
 
 # Create data
 df = get_data()
-print(df.head())
+# print(df.head())
 
 # topoJSON of UK Local authority Districts from http://martinjc.github.io/UK-GeoJSON/json/eng/topo_lad.json and https://github.com/martinjc/UK-GeoJSON/blob/master/json/administrative/gb/lad.json
 uk_local = json.load(open("lad.json","r"))
@@ -25,17 +25,19 @@ for feature in uk_local['features']:
 
 df['id'] = df['local_authority_district'].apply(lambda x: counties_map[x] if x in counties_map.keys() else pd.NA)
 df = df.dropna(subset=['id'])
+df.set_index('id', drop=False, inplace=True)
+df.index.rename('district_id', inplace=True)
 # df['id'].isna().sum()
 
 districts = [uk_local['features'][i]['properties']['LAD13NM'] for i in range(len(uk_local['features']))]
 
 districts2 = df['local_authority_district'].unique()
-count = 0
+# count = 0
 
-for i in range(len(districts2)):
-    if districts2[i] not in districts:
-        print(districts2[i])
-        count += 1
+# for i in range(len(districts2)):
+#     if districts2[i] not in districts:
+#         print(districts2[i])
+#         count += 1
 
 df2 = df.groupby(['id', 'local_authority_district']).size().reset_index(name='Count')
 
@@ -48,53 +50,67 @@ scatterplot2 = Scatterplot("Scatterplot 2", 'light_conditions', 'number_of_casua
 app.layout = html.Div(children=[
     # All elements from the top of the page
     dcc.Loading(id = "loading-icon",
-                children=[
-                html.Div([
-        
-        html.Div([
-            
-            dcc.Dropdown(
-                id='view',
-                options=[{'label': i, 'value': i} for i in available_indicators],
-                value='Count'
-            ),
-
-            dcc.Graph(
-                id='graph1',
-                figure=fig,
-                style = {
-                    'width': '130vh',
-                    'height': '110vh'
-                }
-            ),  
-        ], className='six columns')], className='row'),
-        html.Div(
-            id="app-container",
-            children=[
-                # Left column
-                html.Div(
-                    id="left-column",
-                    className="three columns",
-                    children=make_menu_layout()
-                ),
-
-                # Right column
-                html.Div(
-                    id="right-column",
-                    className="nine columns",
-                    children=[
-                        scatterplot1,
-                        scatterplot2
-                    ],
+        fullscreen=True,
+        children=[
+            html.Div([
+                dcc.Dropdown(
+                    id='view',
+                    options=[{'label': i, 'value': i} for i in available_indicators],
+                    value='Count',
+                    
                 ),
             ],
+            style={'display': 'inline-block', 'width': '49%'}
+            ),
+            html.Div([
+                
+                html.Div([
+                    dcc.Graph(
+                        id='graph1',
+                        clickData={'points': [{'customdata': 'City of London'}]},
+                        style = {
+                            'width': '130vh',
+                            'height': '110vh',
+                        }    
+                    ),
+                ], 
+                style={'margin': '10px', 'display': 'inline-block'}),
+                
+                html.Div([
+                    dcc.Graph(
+                        id='graph2',
+                    ),
+                ], 
+                style={'display': 'inline-block', 'vertical-align': 'top'})
+            ]),
+
+            html.Div(
+                id="app-container",
+                children=[
+                    # Left column
+                    html.Div(
+                        id="left-column",
+                        className="three columns",
+                        children=make_menu_layout()
+                    ),
+
+                    # Right column
+                    html.Div(
+                        id="right-column",
+                        className="nine columns",
+                        children=[
+                            scatterplot1,
+                            scatterplot2
+                        ],
+                    ),
+                ],
+            ),
+            
+            ], 
+            type="graph"
         ),
-        
-        ], 
-        type="graph"
-    ),
     
-]
+    ]
 )
 @app.callback(
     Output('graph1', 'figure'),  
@@ -105,10 +121,18 @@ def update_graph(view_value):
         fig.update_geos(fitbounds='locations', visible=False)
 
     elif view_value == 'Fatal Accidents Percentage':
-        
+        print(df)
         df3 = (df.groupby(['id','local_authority_district'])['accident_severity'].value_counts(normalize=True) * 100).reset_index(name="Percentage")
+        print(df3)
         df3 = df3.loc[df3['accident_severity'] == 'Fatal']
-
+        df3.set_index('id', drop=False, inplace=True)
+        df3 = df3.reindex(df.index, fill_value=0)
+        df3['id'] = df3.index
+        df3.index.rename('district_id', inplace=True)
+        print(df3)
+        df3.reindex(df.index, fill_value=0)
+        # df3 = df3.loc[df3['accident_severity'] == 'Fatal']
+       
 
         fig = px.choropleth(df3, locations='id', geojson=uk_local, color='Percentage', hover_data=['local_authority_district'], scope='europe')
         fig.update_geos(fitbounds='locations', visible=False)
@@ -132,6 +156,62 @@ def update_scatter_1(selected_color, selected_data):
 ])
 def update_scatter_2(selected_color, selected_data):
     return scatterplot2.update(selected_color, selected_data)
+
+
+
+@app.callback(
+    Output('graph2', 'figure'),  
+    [Input('graph1', 'clickData'),
+    Input('view', 'value')
+])
+def update_graph2(clickData, view_value):
+    # print(clickData)
+    if type(clickData['points'][0]['customdata']) == str:
+        district = clickData['points'][0]['customdata']
+    else:
+        district = clickData['points'][0]['customdata'][0]
+    dff2 = df2[df2['local_authority_district'] == district]
+    if view_value == 'Count':
+        fig = px.choropleth(dff2, locations='id', geojson=uk_local, color='Count', hover_data=['local_authority_district'], scope='europe')
+        fig.update_geos(fitbounds='locations', visible=False)
+
+    elif view_value == 'Fatal Accidents Percentage':
+        
+        df3 = (df.groupby(['id','local_authority_district'])['accident_severity'].value_counts(normalize=True) * 100).fillna(0).reset_index(name="Percentage")
+        df3 = df3.loc[df3['accident_severity'] == 'Fatal']
+        dff3 = df3[df3['local_authority_district'] == district]
+
+        fig = px.choropleth(dff3, locations='id', geojson=uk_local, color='Percentage', hover_data=['local_authority_district'], scope='europe')
+        fig.update_geos(fitbounds='locations', visible=False)
+
+    return fig
+
+
+# @app.callback(
+#     dash.dependencies.Output('x-time-series', 'figure'),
+#     [dash.dependencies.Input('crossfilter-indicator-scatter', 'hoverData'),
+#      dash.dependencies.Input('crossfilter-xaxis-column', 'value'),
+#      dash.dependencies.Input('crossfilter-xaxis-type', 'value')])
+# def update_y_timeseries(hoverData, xaxis_column_name, axis_type):
+#     country_name = hoverData['points'][0]['customdata']
+#     dff = df[df['Country Name'] == country_name]
+#     dff = dff[dff['Indicator Name'] == xaxis_column_name]
+#     title = '<b>{}</b><br>{}'.format(country_name, xaxis_column_name)
+#     return create_time_series(dff, axis_type, title)
+
+
+# @app.callback(
+#     dash.dependencies.Output('y-time-series', 'figure'),
+#     [dash.dependencies.Input('crossfilter-indicator-scatter', 'hoverData'),
+#      dash.dependencies.Input('crossfilter-yaxis-column', 'value'),
+#      dash.dependencies.Input('crossfilter-yaxis-type', 'value')])
+# def update_x_timeseries(hoverData, yaxis_column_name, axis_type):
+#     dff = df[df['Country Name'] == hoverData['points'][0]['customdata']]
+#     dff = dff[dff['Indicator Name'] == yaxis_column_name]
+#     return create_time_series(dff, axis_type, yaxis_column_name)
+
+
+
 
 if __name__ == '__main__':
     # app.run_server(debug=False, dev_tools_ui=False)
