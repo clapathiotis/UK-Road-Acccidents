@@ -1,3 +1,4 @@
+import click
 from jbi100_app.data import get_data
 from jbi100_app.main import app
 from jbi100_app.views.menu import make_menu_layout
@@ -69,20 +70,21 @@ app.layout = html.Div(children=[
                         id='graph1',
                         clickData={'points': [{'customdata': 'City of London'}]},
                         style = {
-                            'width': '130vh',
-                            'height': '110vh',
+                            'width': '115vh',
+                            'height': '95vh',
                         }    
                     ),
                 ], 
                 style={'margin': '10px', 'display': 'inline-block'}),
-                
                 html.Div([
                     dcc.Graph(
-                        id='graph2',
+                        id='heatmap',
                     ),
                 ], 
-                style={'display': 'inline-block', 'vertical-align': 'top'})
+            style={'display': 'inline-block', 'vertical-align': 'top'}),
+                
             ]),
+             
 
             html.Div(
                 id="app-container",
@@ -157,34 +159,88 @@ def update_scatter_1(selected_color, selected_data):
 def update_scatter_2(selected_color, selected_data):
     return scatterplot2.update(selected_color, selected_data)
 
+def get_z_values(clickData, df):
+    district = get_district(clickData)
+    df = df[df['local_authority_district']==district]
+    # print(df.head())
+    # print(district)
+    Dry_count = (df.road_surface_conditions == "Dry").sum()
+    Wet_or_damp = (df.road_surface_conditions == "Wet or damp").sum()
+    Snow_count = (df.road_surface_conditions == "Snow").sum()
+    Frost_or_ice = (df.road_surface_conditions == "Frost or ice").sum()
+    Flood = (df.road_surface_conditions == "Flood over 3cm. deep").sum()
+    Oil_or_diesel = (df.road_surface_conditions == "Oil or diesel").sum()
+    Mud_count = (df.road_surface_conditions == "Mud").sum()
 
+    #light
+    Daylight_count = (df.light_conditions == "Daylight").sum()
+    Darkness_lit = (df.light_conditions == "Darkness - lights lit").sum()
+    Darkness_unlit = (df.light_conditions == "Darkness - lights unlit").sum()
+    Darkness_no_light = (df.light_conditions == "Darkness - no lighting").sum()
+    z = [[Daylight_count +Dry_count, Daylight_count +Frost_or_ice, Daylight_count +Wet_or_damp,Daylight_count +Flood, Daylight_count +Snow_count, Daylight_count +Oil_or_diesel, Daylight_count +Mud_count],
+        [Darkness_lit +Dry_count, Darkness_lit +Frost_or_ice, Darkness_lit +Wet_or_damp,Darkness_lit +Flood, Darkness_lit +Snow_count, Darkness_lit +Oil_or_diesel, Darkness_lit +Mud_count], 
+        [Darkness_unlit +Dry_count, Darkness_unlit +Frost_or_ice, Darkness_unlit +Wet_or_damp,Darkness_unlit +Flood, Darkness_unlit +Snow_count, Darkness_unlit +Oil_or_diesel, Darkness_unlit +Mud_count], 
+        [Darkness_no_light +Dry_count, Darkness_no_light +Frost_or_ice, Darkness_no_light +Wet_or_damp,Darkness_no_light +Flood, Darkness_no_light +Snow_count, Darkness_no_light +Oil_or_diesel, Darkness_no_light +Mud_count]]
+    return z
 
-@app.callback(
-    Output('graph2', 'figure'),  
-    [Input('graph1', 'clickData'),
-    Input('view', 'value')
-])
-def update_graph2(clickData, view_value):
-    # print(clickData)
+def get_district(clickData):
     if type(clickData['points'][0]['customdata']) == str:
         district = clickData['points'][0]['customdata']
     else:
         district = clickData['points'][0]['customdata'][0]
-    dff2 = df2[df2['local_authority_district'] == district]
-    if view_value == 'Count':
-        fig = px.choropleth(dff2, locations='id', geojson=uk_local, color='Count', hover_data=['local_authority_district'], scope='europe')
-        fig.update_geos(fitbounds='locations', visible=False)
+    return district
 
-    elif view_value == 'Fatal Accidents Percentage':
+@app.callback(
+    Output('heatmap', 'figure'),  
+    [Input('graph1', 'clickData')
+])   
+def update_heatmap(clickData):
+    # if view_value == 'Count':
+    #     fig = px.choropleth(dff2, locations='id', geojson=uk_local, color='Count', hover_data=['local_authority_district'], scope='europe')
+    #     fig.update_geos(fitbounds='locations', visible=False)
+
+    # elif view_value == 'Fatal Accidents Percentage':
         
-        df3 = (df.groupby(['id','local_authority_district'])['accident_severity'].value_counts(normalize=True) * 100).fillna(0).reset_index(name="Percentage")
-        df3 = df3.loc[df3['accident_severity'] == 'Fatal']
-        dff3 = df3[df3['local_authority_district'] == district]
+    #     df3 = (df.groupby(['id','local_authority_district'])['accident_severity'].value_counts(normalize=True) * 100).fillna(0).reset_index(name="Percentage")
+    #     df3 = df3.loc[df3['accident_severity'] == 'Fatal']
+    #     dff3 = df3[df3['local_authority_district'] == district]
 
-        fig = px.choropleth(dff3, locations='id', geojson=uk_local, color='Percentage', hover_data=['local_authority_district'], scope='europe')
-        fig.update_geos(fitbounds='locations', visible=False)
-
-    return fig
+    #     fig = px.choropleth(dff3, locations='id', geojson=uk_local, color='Percentage', hover_data=['local_authority_district'], scope='europe')
+    #     fig.update_geos(fitbounds='locations', visible=False)
+    
+    # left_margin = 200
+    # right_margin = 100
+    # print(clickData)
+    if (clickData is None):
+        return {'data': []}
+    else :
+        dff = df[["local_authority_district", "road_surface_conditions", "light_conditions"]]
+        z_values = get_z_values(clickData, dff)
+        district = get_district(clickData)
+        # print(z_values[1][1])
+        return {
+            'data': [{
+                'z': z_values,
+                'y': ['Dry', 'Wet or damp', 'Snow', 'Frost or ice', 'Flood over 3cm. deep',  'Oil or diesel', 'Mud'],
+                'x': ['Daylight', 'Darkness - lights lit', 'Darkness - lights unlit', 'Darkness - no lighting'],
+                'ygap': 2,
+                'reversescale': 'true',
+                'colorscale': [[0, 'white'], [1, 'orange'], [2, 'red']],
+                'type': 'heatmap',
+            }],
+            'layout': {
+                'height': 500,
+                'width': 600,
+                'title' : "Road Surface vs Lighting Conditions at " + district,
+                'xaxis': {'side':'bottom'},
+                'margin': {
+                	# 'l': left_margin,
+                	# 'r': right_margin,
+                	'b': 150,
+                	't': 100
+                }
+            }
+        }
 
 
 # @app.callback(

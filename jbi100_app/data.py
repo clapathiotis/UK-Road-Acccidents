@@ -9,8 +9,9 @@ def get_data():
     
     # Any further data preprocessing can go her
     # df = df[df["number_of_casualties"]>1]
-    # df = df[df["weather_conditions"] != "Other"]
-    # df = df[df["weather_conditions"] != "Unknown"]
+    df = df[df["weather_conditions"] != "Other"]
+    df = df[df["weather_conditions"] != "Unknown"]
+    df = df[df["road_surface_conditions"] != "unknown (self reported)"]
 
     # For counts of accidents per weather condition
     Fog_count = (df.weather_conditions == "Fog or mist").sum() #this does nothing here just an example
