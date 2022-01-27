@@ -221,7 +221,7 @@ def update_heatmap(clickData):
         return {
             'data': [{
                 'z': z_values,
-                'y': ['Dry', 'Wet or damp', 'Snow', 'Frost or ice', 'Flood over 3cm. deep',  'Oil or diesel', 'Mud'],
+                'y': ['Dry', 'Wet / damp', 'Snow', 'Frost / ice', 'Flood',  'Oil / diesel', 'Mud'],
                 'x': ['Daylight', 'Darkness - lights lit', 'Darkness - lights unlit', 'Darkness - no lighting'],
                 'ygap': 2,
                 'reversescale': 'true',
