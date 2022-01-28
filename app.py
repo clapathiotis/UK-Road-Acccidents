@@ -1,4 +1,6 @@
+from ssl import ALERT_DESCRIPTION_UNRECOGNIZED_NAME
 import click
+from numpy import size
 from jbi100_app.data import get_data
 from jbi100_app.main import app
 from jbi100_app.views.menu import make_menu_layout
@@ -68,7 +70,7 @@ app.layout = html.Div(children=[
                 html.Div([
                     dcc.Graph(
                         id='graph1',
-                        clickData={'points': [{'customdata': 'City of London'}]},
+                        clickData={'points': [{'customdata': 'North Somerset'}]},
                         style = {
                             'width': '115vh',
                             'height': '95vh',
@@ -83,6 +85,17 @@ app.layout = html.Div(children=[
                 ], 
             style={'display': 'inline-block', 'vertical-align': 'top'}),
                 
+            ]),
+
+            html.Div([
+                dcc.Graph(id="histo"),
+                html.P("Select Distribution:"),
+                dcc.RadioItems(
+                    id='dist-marginal',
+                    options=[{'label': x, 'value': x} 
+                        for x in ['box', 'violin', 'rug']],
+                    value='box'
+                )
             ]),
              
 
@@ -114,6 +127,30 @@ app.layout = html.Div(children=[
     
     ]
 )
+
+@app.callback(
+    Output("histo", "figure"), 
+    [Input("dist-marginal", "value"), 
+    Input("graph1", "clickData")])
+def update_hist(marginal, clickData):
+    print("test1")
+    district = get_district(clickData)
+    print(district)
+    df = get_data()
+    print("test2")
+    df = df[["local_authority_district", "speed_limit", 'accident_severity', "number_of_casualties"]]
+    df = df[df["local_authority_district"] == district]
+    df = df[df["speed_limit"] != -1]
+    df = df.sort_values('speed_limit')
+    print(df.head())
+    print("test3")
+    fig = px.histogram(
+        df, x="speed_limit", y="number_of_casualties", color ='accident_severity',
+        marginal=marginal, range_x=[-1, 6], hover_data=df.columns, width = 1000, height=600, title = "Number of Casualties and Speed Correlation at "+ district,
+        labels=dict(x = "Speed Limit(mph)", y = "Total Number Of Casualties"))
+
+    return fig
+
 @app.callback(
     Output('graph1', 'figure'),  
     Input('view', 'value'))
