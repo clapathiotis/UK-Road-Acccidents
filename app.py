@@ -1,5 +1,6 @@
 from ssl import ALERT_DESCRIPTION_UNRECOGNIZED_NAME
 import click
+from matplotlib.pyplot import title
 from numpy import size
 from jbi100_app.data import get_data
 from jbi100_app.main import app
@@ -93,33 +94,37 @@ app.layout = html.Div(children=[
                 dcc.RadioItems(
                     id='dist-marginal',
                     options=[{'label': x, 'value': x} 
-                        for x in ['box', 'violin', 'rug']],
+                        for x in ['box', 'violin']],
                     value='box'
                 )
             ]),
+
+            html.Div([
+                dcc.Graph(id="scatter"),
+            ]),
              
 
-            html.Div(
-                id="app-container",
-                children=[
-                    # Left column
-                    html.Div(
-                        id="left-column",
-                        className="three columns",
-                        children=make_menu_layout()
-                    ),
+            # html.Div(
+            #     id="app-container",
+            #     children=[
+            #         # Left column
+            #         html.Div(
+            #             id="left-column",
+            #             className="three columns",
+            #             children=make_menu_layout()
+            #         ),
 
-                    # Right column
-                    html.Div(
-                        id="right-column",
-                        className="nine columns",
-                        children=[
-                            scatterplot1,
-                            scatterplot2
-                        ],
-                    ),
-                ],
-            ),
+            #         # Right column
+            #         html.Div(
+            #             id="right-column",
+            #             className="nine columns",
+            #             children=[
+            #                 scatterplot1,
+            #                 scatterplot2
+            #             ],
+            #         ),
+            #     ],
+            # ),
             
             ], 
             type="graph"
@@ -127,6 +132,26 @@ app.layout = html.Div(children=[
     
     ]
 )
+
+@app.callback(
+    Output("scatter", "figure"), 
+    [Input("graph1", "clickData")])
+def update_line(clickData):
+    district = get_district(clickData)
+    df = get_data()
+    df = df[['accident_severity', 'time', 'number_of_casualties', 'local_authority_district']]
+    df['time'] = pd.to_datetime(df["time"], format = "%H:%M").dt.hour
+    print(df['time'].head())
+    df = df.sort_values('time')
+    df = df[df["local_authority_district"] == district]
+    fig = px.histogram(df, x='time', y='number_of_casualties', color='accident_severity', hover_data=df.columns,
+                     title="Number of Casualties and Accident Severity during the day at "+ district, marginal = "box", barmode = 'overlay', opacity=0.75, nbins=24, 
+                     labels={
+                     "number_of_casualties": "Number of Casualties",
+                     "time": "Time of Day (HH:MM)",
+                     "accident_severity": "Accident Severity"
+                 },)
+    return fig
 
 @app.callback(
     Output("histo", "figure"), 
@@ -179,22 +204,22 @@ def update_graph(view_value):
     return fig
 
 
-# Define interactions
-@app.callback(
-    Output(scatterplot1.html_id, "figure"), [
-    Input("select-color-scatter-1", "value"),
-    Input(scatterplot2.html_id, 'selectedData')
-])
-def update_scatter_1(selected_color, selected_data):
-    return scatterplot1.update(selected_color, selected_data)
+# # Define interactions
+# @app.callback(
+#     Output(scatterplot1.html_id, "figure"), [
+#     Input("select-color-scatter-1", "value"),
+#     Input(scatterplot2.html_id, 'selectedData')
+# ])
+# def update_scatter_1(selected_color, selected_data):
+#     return scatterplot1.update(selected_color, selected_data)
 
-@app.callback(
-    Output(scatterplot2.html_id, "figure"), [
-    Input("select-color-scatter-2", "value"),
-    Input(scatterplot1.html_id, 'selectedData')
-])
-def update_scatter_2(selected_color, selected_data):
-    return scatterplot2.update(selected_color, selected_data)
+# @app.callback(
+#     Output(scatterplot2.html_id, "figure"), [
+#     Input("select-color-scatter-2", "value"),
+#     Input(scatterplot1.html_id, 'selectedData')
+# ])
+# def update_scatter_2(selected_color, selected_data):
+#     return scatterplot2.update(selected_color, selected_data)
 
 def get_z_values(clickData, df):
     district = get_district(clickData)
