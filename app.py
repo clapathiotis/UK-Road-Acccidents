@@ -51,26 +51,29 @@ app.layout = html.Div(children=[
                 html.H2('UK Road Accident Analytics Tool Per Municipality', style={'textAlign': 'center'})
             ]),
             html.Div([
-                html.Center('Choose Between Total Amout of Accidents of Fatality Rate'),
+            html.Div([
+                html.Center('Choose Between Total Amount of Accidents or Fatality Rate'),
                 dcc.Dropdown(
                     id='view',
                     options=[{'label': i, 'value': i} for i in available_indicators],
                     value='Count',
                 ),
+                html.Center('Click on a Municipality in order to update the other graphs and find correlations!'),
                 dcc.Graph(
                         id='graph1',
-                        clickData={'points': [{'customdata': 'North Somerset'}]} 
+                        clickData={'points': [{'customdata': 'North Somerset'}]},
+                        style = {'width': '120vh', 'height': '150vh'} 
                     ),
             ],
-            style={'display': 'inline-block', 'width': '48%', 'align' : 'left'}),
-
+            style={'display': 'inline-block', 'align' : 'left', 'float': 'left'})
+            ]),
             html.Div([
-                html.Center('Choose a Municipality in order to update the other graphs and find correlations!'),
+                
                 dcc.Graph(
                     id='heatmap'
                 ),
             ], 
-            style={'display': 'inline-block', 'width' : '40%', 'align' : 'right', 'margin' : '10px'}),
+            style={'display': 'inline-block', 'width' : '50%', 'align' : 'right', 'margin' : '10px'}),
 
             html.Div([
                 dcc.Graph(id="histo"),
@@ -82,7 +85,7 @@ app.layout = html.Div(children=[
                     value='box'
                 )
             ],
-            style={'display': 'inline-block', 'width' : '45%', 'align' : 'left', 'margin' : '10px'}
+            style={'display': 'inline-block', 'width' : '50%', 'align' : 'right', 'margin' : '10px'}
             ),
 
             html.Div([
@@ -93,15 +96,16 @@ app.layout = html.Div(children=[
                     options=[{'label': x, 'value': x} 
                         for x in ['box', 'violin']],
                     value='box'
-                )
+                ),
+                html.H2("Choosing between Distributions can give a better view of the trends hourly or according to speed limit of the road.", style={'fontSize': 15}) 
             ],
-            style={'display': 'inline-block', 'width' : '45%', 'align' : 'right', 'margin' : '10px'}), 
-            html.H2("Choosing between Distributions can give a better view of the trends hourly or according to speed limit of the road.", style={'fontSize': 15})          
+            style={'display': 'inline-block', 'width' : '50%', 'align' : 'right', 'margin' : '10px'}), 
+                     
             ], 
         type="graph"
         ),
     ],
-    style = {'display' : 'inline-block', 'width' : '100%', 'height' : '100%'}
+    # style = {'display' : 'inline-block', 'width' : '100%', 'height' : '100%'}
 )
 
 @app.callback(
@@ -116,7 +120,7 @@ def update_hist2(marginal2, clickData):
     df = df.sort_values('time')
     df = df[df["local_authority_district"] == district]
     fig = px.histogram(df, x='time', y='number_of_casualties', color='accident_severity', hover_data=df.columns,
-                     title="Number of Casualties and Accident Severity hourly at "+ district, marginal = marginal2, barmode = 'overlay', opacity=0.75, nbins=24, 
+                     title="Overlay Histogram with Number of Casualties and Accident Severity hourly at "+ district, marginal = marginal2, barmode = 'overlay', opacity=0.75, nbins=24, 
                      labels={
                      "number_of_casualties": "Number of Casualties",
                      "time": "Time of Day (Hours)",
@@ -137,7 +141,7 @@ def update_hist(marginal, clickData):
     df = df.sort_values('speed_limit')
     fig = px.histogram(
         df, x="speed_limit", y="number_of_casualties", color ='accident_severity',
-        marginal=marginal, range_x=[-1, 6], hover_data=df.columns, width = 700, height=400, title = "Number of Casualties and Speed Correlation at "+ district,
+        marginal=marginal, range_x=[-1, 6], hover_data=df.columns, width = 700, height=400, title = "Stacked Histogram with Number of Casualties and Speed Correlation at "+ district,
         labels={
                      "speed_limit": "Road Speed Limit(mph)",
                      "number_of_casualties": "Amount of Casualties",
@@ -151,7 +155,7 @@ def update_hist(marginal, clickData):
     Input('view', 'value'))
 def update_graph(view_value):
     if view_value == 'Count':
-        fig = px.choropleth(df2, locations='id', geojson=uk_local, color='Count', hover_data=['local_authority_district'], scope='europe')
+        fig = px.choropleth(df2, locations='id', geojson=uk_local, color='Count', hover_data=['local_authority_district'], scope='europe', title='Map for Total Number of Accidents per Municipality')
         fig.update_geos(fitbounds='locations', visible=False)
 
     elif view_value == 'Fatal Accidents Percentage':
@@ -164,7 +168,7 @@ def update_graph(view_value):
         df3.reindex(df.index, fill_value=0)
        
 
-        fig = px.choropleth(df3, locations='id', geojson=uk_local, color='Percentage', hover_data=['local_authority_district'], scope='europe')
+        fig = px.choropleth(df3, locations='id', geojson=uk_local, color='Percentage', hover_data=['local_authority_district'], scope='europe', title='Map for Fatal Accidents Percentage per Municipality')
         fig.update_geos(fitbounds='locations', visible=False)
 
     return fig
@@ -194,7 +198,7 @@ def get_z_values(clickData, df):
     return z
 
 def get_district(clickData):
-    print("Updaing Data...")
+    print("Updating Data...")
     if type(clickData['points'][0]['customdata']) == str:
         district = clickData['points'][0]['customdata']
     else:
@@ -220,11 +224,13 @@ def update_heatmap(clickData):
                 'ygap': 2,
                 'reversescale': 'true',
                 'colorscale': 'z_values',
+                'colorbar': {"title": 'Accident count'},
                 'type': 'heatmap',
             }],
             'layout': {
                 'height': 485,
                 'width': 715,
+                
                 'title' : "Road Surface vs Lighting Conditions at " + district,
                 'xaxis': {'side':'bottom'},
                 'margin': {
@@ -233,7 +239,7 @@ def update_heatmap(clickData):
                 	'b': 120,
                 	't': 100
                 },
-            }
+            },
         }
 
 
