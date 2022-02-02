@@ -13,9 +13,4 @@ def get_data():
     df = df[df["weather_conditions"] != "Unknown"]
     df = df[df["road_surface_conditions"] != "unknown (self reported)"]
     df = df[df["speed_limit"] != "Data missing or out of range"]
-
-
-    # For counts of accidents per weather condition
-    Fog_count = (df.weather_conditions == "Fog or mist").sum() #this does nothing here just an example
-    print (Fog_count) # same here, its an example
     return df

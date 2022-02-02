@@ -17,8 +17,8 @@ from dash import dcc
 from dash import html
 
 # Create data
+print("Loading Data...")
 df = get_data()
-# print(df.head())
 
 # topoJSON of UK Local authority Districts from http://martinjc.github.io/UK-GeoJSON/json/eng/topo_lad.json and https://github.com/martinjc/UK-GeoJSON/blob/master/json/administrative/gb/lad.json
 uk_local = json.load(open("lad.json","r"))
@@ -31,17 +31,10 @@ df['id'] = df['local_authority_district'].apply(lambda x: counties_map[x] if x i
 df = df.dropna(subset=['id'])
 df.set_index('id', drop=False, inplace=True)
 df.index.rename('district_id', inplace=True)
-# df['id'].isna().sum()
 
 districts = [uk_local['features'][i]['properties']['LAD13NM'] for i in range(len(uk_local['features']))]
 
 districts2 = df['local_authority_district'].unique()
-# count = 0
-
-# for i in range(len(districts2)):
-#     if districts2[i] not in districts:
-#         print(districts2[i])
-#         count += 1
 
 df2 = df.groupby(['id', 'local_authority_district']).size().reset_index(name='Count')
 
@@ -49,44 +42,35 @@ fig = px.choropleth(df2, locations='id', geojson=uk_local, color='Count', hover_
 fig.update_geos(fitbounds='locations', visible=False)
 available_indicators = ['Count', 'Fatal Accidents Percentage']
 # Instantiate custom views
-scatterplot1 = Scatterplot("Scatterplot 1", 'weather_conditions', 'number_of_casualties', df)
-scatterplot2 = Scatterplot("Scatterplot 2", 'light_conditions', 'number_of_casualties', df)
 app.layout = html.Div(children=[
     # All elements from the top of the page
     dcc.Loading(id = "loading-icon",
         fullscreen=True,
         children=[
             html.Div([
+                html.H2('UK Road Accident Analytics Tool Per Municipality', style={'textAlign': 'center'})
+            ]),
+            html.Div([
+                html.Center('Choose Between Total Amout of Accidents of Fatality Rate'),
                 dcc.Dropdown(
                     id='view',
                     options=[{'label': i, 'value': i} for i in available_indicators],
                     value='Count',
-                    
                 ),
-            ],
-            style={'display': 'inline-block', 'width': '49%'}
-            ),
-            html.Div([
-                
-                html.Div([
-                    dcc.Graph(
+                dcc.Graph(
                         id='graph1',
-                        clickData={'points': [{'customdata': 'North Somerset'}]},
-                        style = {
-                            'width': '115vh',
-                            'height': '95vh',
-                        }    
+                        clickData={'points': [{'customdata': 'North Somerset'}]} 
                     ),
-                ], 
-                style={'margin': '10px', 'display': 'inline-block'}),
-                html.Div([
-                    dcc.Graph(
-                        id='heatmap',
-                    ),
-                ], 
-            style={'display': 'inline-block', 'vertical-align': 'top'}),
-                
-            ]),
+            ],
+            style={'display': 'inline-block', 'width': '48%', 'align' : 'left'}),
+
+            html.Div([
+                html.Center('Choose a Municipality in order to update the other graphs and find correlations!'),
+                dcc.Graph(
+                    id='heatmap'
+                ),
+            ], 
+            style={'display': 'inline-block', 'width' : '40%', 'align' : 'right', 'margin' : '10px'}),
 
             html.Div([
                 dcc.Graph(id="histo"),
@@ -97,60 +81,47 @@ app.layout = html.Div(children=[
                         for x in ['box', 'violin']],
                     value='box'
                 )
-            ]),
+            ],
+            style={'display': 'inline-block', 'width' : '45%', 'align' : 'left', 'margin' : '10px'}
+            ),
 
             html.Div([
-                dcc.Graph(id="scatter"),
-            ]),
-             
-
-            # html.Div(
-            #     id="app-container",
-            #     children=[
-            #         # Left column
-            #         html.Div(
-            #             id="left-column",
-            #             className="three columns",
-            #             children=make_menu_layout()
-            #         ),
-
-            #         # Right column
-            #         html.Div(
-            #             id="right-column",
-            #             className="nine columns",
-            #             children=[
-            #                 scatterplot1,
-            #                 scatterplot2
-            #             ],
-            #         ),
-            #     ],
-            # ),
-            
+                dcc.Graph(id="histo2"),
+                html.P("Select Distribution:"),
+                dcc.RadioItems(
+                    id='dist-marginal2',
+                    options=[{'label': x, 'value': x} 
+                        for x in ['box', 'violin']],
+                    value='box'
+                )
+            ],
+            style={'display': 'inline-block', 'width' : '45%', 'align' : 'right', 'margin' : '10px'}), 
+            html.H2("Choosing between Distributions can give a better view of the trends hourly or according to speed limit of the road.", style={'fontSize': 15})          
             ], 
-            type="graph"
+        type="graph"
         ),
-    
-    ]
+    ],
+    style = {'display' : 'inline-block', 'width' : '100%', 'height' : '100%'}
 )
 
 @app.callback(
-    Output("scatter", "figure"), 
-    [Input("graph1", "clickData")])
-def update_line(clickData):
+    Output("histo2", "figure"), 
+    [Input("dist-marginal2", "value"),
+    Input("graph1", "clickData")])
+def update_hist2(marginal2, clickData):
     district = get_district(clickData)
     df = get_data()
     df = df[['accident_severity', 'time', 'number_of_casualties', 'local_authority_district']]
     df['time'] = pd.to_datetime(df["time"], format = "%H:%M").dt.hour
-    print(df['time'].head())
     df = df.sort_values('time')
     df = df[df["local_authority_district"] == district]
     fig = px.histogram(df, x='time', y='number_of_casualties', color='accident_severity', hover_data=df.columns,
-                     title="Number of Casualties and Accident Severity during the day at "+ district, marginal = "box", barmode = 'overlay', opacity=0.75, nbins=24, 
+                     title="Number of Casualties and Accident Severity hourly at "+ district, marginal = marginal2, barmode = 'overlay', opacity=0.75, nbins=24, 
                      labels={
                      "number_of_casualties": "Number of Casualties",
-                     "time": "Time of Day (HH:MM)",
+                     "time": "Time of Day (Hours)",
                      "accident_severity": "Accident Severity"
-                 },)
+                 }, height=400, width = 750)
     return fig
 
 @app.callback(
@@ -158,21 +129,20 @@ def update_line(clickData):
     [Input("dist-marginal", "value"), 
     Input("graph1", "clickData")])
 def update_hist(marginal, clickData):
-    print("test1")
     district = get_district(clickData)
-    print(district)
     df = get_data()
-    print("test2")
     df = df[["local_authority_district", "speed_limit", 'accident_severity', "number_of_casualties"]]
     df = df[df["local_authority_district"] == district]
     df = df[df["speed_limit"] != -1]
     df = df.sort_values('speed_limit')
-    print(df.head())
-    print("test3")
     fig = px.histogram(
         df, x="speed_limit", y="number_of_casualties", color ='accident_severity',
-        marginal=marginal, range_x=[-1, 6], hover_data=df.columns, width = 1000, height=600, title = "Number of Casualties and Speed Correlation at "+ district,
-        labels=dict(x = "Speed Limit(mph)", y = "Total Number Of Casualties"))
+        marginal=marginal, range_x=[-1, 6], hover_data=df.columns, width = 700, height=400, title = "Number of Casualties and Speed Correlation at "+ district,
+        labels={
+                     "speed_limit": "Road Speed Limit(mph)",
+                     "number_of_casualties": "Amount of Casualties",
+                     "accident_severity": "Accident Severity"
+                 },)
 
     return fig
 
@@ -185,17 +155,13 @@ def update_graph(view_value):
         fig.update_geos(fitbounds='locations', visible=False)
 
     elif view_value == 'Fatal Accidents Percentage':
-        print(df)
         df3 = (df.groupby(['id','local_authority_district'])['accident_severity'].value_counts(normalize=True) * 100).reset_index(name="Percentage")
-        print(df3)
         df3 = df3.loc[df3['accident_severity'] == 'Fatal']
         df3.set_index('id', drop=False, inplace=True)
         df3 = df3.reindex(df.index, fill_value=0)
         df3['id'] = df3.index
         df3.index.rename('district_id', inplace=True)
-        print(df3)
         df3.reindex(df.index, fill_value=0)
-        # df3 = df3.loc[df3['accident_severity'] == 'Fatal']
        
 
         fig = px.choropleth(df3, locations='id', geojson=uk_local, color='Percentage', hover_data=['local_authority_district'], scope='europe')
@@ -204,28 +170,10 @@ def update_graph(view_value):
     return fig
 
 
-# # Define interactions
-# @app.callback(
-#     Output(scatterplot1.html_id, "figure"), [
-#     Input("select-color-scatter-1", "value"),
-#     Input(scatterplot2.html_id, 'selectedData')
-# ])
-# def update_scatter_1(selected_color, selected_data):
-#     return scatterplot1.update(selected_color, selected_data)
-
-# @app.callback(
-#     Output(scatterplot2.html_id, "figure"), [
-#     Input("select-color-scatter-2", "value"),
-#     Input(scatterplot1.html_id, 'selectedData')
-# ])
-# def update_scatter_2(selected_color, selected_data):
-#     return scatterplot2.update(selected_color, selected_data)
-
 def get_z_values(clickData, df):
     district = get_district(clickData)
     df = df[df['local_authority_district']==district]
-    # print(df.head())
-    # print(district)
+    
     Dry_count = (df.road_surface_conditions == "Dry").sum()
     Wet_or_damp = (df.road_surface_conditions == "Wet or damp").sum()
     Snow_count = (df.road_surface_conditions == "Snow").sum()
@@ -246,6 +194,7 @@ def get_z_values(clickData, df):
     return z
 
 def get_district(clickData):
+    print("Updaing Data...")
     if type(clickData['points'][0]['customdata']) == str:
         district = clickData['points'][0]['customdata']
     else:
@@ -257,29 +206,12 @@ def get_district(clickData):
     [Input('graph1', 'clickData')
 ])   
 def update_heatmap(clickData):
-    # if view_value == 'Count':
-    #     fig = px.choropleth(dff2, locations='id', geojson=uk_local, color='Count', hover_data=['local_authority_district'], scope='europe')
-    #     fig.update_geos(fitbounds='locations', visible=False)
-
-    # elif view_value == 'Fatal Accidents Percentage':
-        
-    #     df3 = (df.groupby(['id','local_authority_district'])['accident_severity'].value_counts(normalize=True) * 100).fillna(0).reset_index(name="Percentage")
-    #     df3 = df3.loc[df3['accident_severity'] == 'Fatal']
-    #     dff3 = df3[df3['local_authority_district'] == district]
-
-    #     fig = px.choropleth(dff3, locations='id', geojson=uk_local, color='Percentage', hover_data=['local_authority_district'], scope='europe')
-    #     fig.update_geos(fitbounds='locations', visible=False)
-    
-    # left_margin = 200
-    # right_margin = 100
-    # print(clickData)
     if (clickData is None):
         return {'data': []}
     else :
         dff = df[["local_authority_district", "road_surface_conditions", "light_conditions"]]
         z_values = get_z_values(clickData, dff)
         district = get_district(clickData)
-        # print(z_values[1][1])
         return {
             'data': [{
                 'z': z_values,
@@ -287,48 +219,22 @@ def update_heatmap(clickData):
                 'x': ['Daylight', 'Darkness - lights lit', 'Darkness - lights unlit', 'Darkness - no lighting'],
                 'ygap': 2,
                 'reversescale': 'true',
-                'colorscale': [[0, 'white'], [1, 'orange'], [2, 'red']],
+                'colorscale': 'z_values',
                 'type': 'heatmap',
             }],
             'layout': {
-                'height': 500,
-                'width': 600,
+                'height': 485,
+                'width': 715,
                 'title' : "Road Surface vs Lighting Conditions at " + district,
                 'xaxis': {'side':'bottom'},
                 'margin': {
-                	# 'l': left_margin,
-                	# 'r': right_margin,
-                	'b': 150,
+                	'l': 140,
+                	'r': 100,
+                	'b': 120,
                 	't': 100
-                }
+                },
             }
         }
-
-
-# @app.callback(
-#     dash.dependencies.Output('x-time-series', 'figure'),
-#     [dash.dependencies.Input('crossfilter-indicator-scatter', 'hoverData'),
-#      dash.dependencies.Input('crossfilter-xaxis-column', 'value'),
-#      dash.dependencies.Input('crossfilter-xaxis-type', 'value')])
-# def update_y_timeseries(hoverData, xaxis_column_name, axis_type):
-#     country_name = hoverData['points'][0]['customdata']
-#     dff = df[df['Country Name'] == country_name]
-#     dff = dff[dff['Indicator Name'] == xaxis_column_name]
-#     title = '<b>{}</b><br>{}'.format(country_name, xaxis_column_name)
-#     return create_time_series(dff, axis_type, title)
-
-
-# @app.callback(
-#     dash.dependencies.Output('y-time-series', 'figure'),
-#     [dash.dependencies.Input('crossfilter-indicator-scatter', 'hoverData'),
-#      dash.dependencies.Input('crossfilter-yaxis-column', 'value'),
-#      dash.dependencies.Input('crossfilter-yaxis-type', 'value')])
-# def update_x_timeseries(hoverData, yaxis_column_name, axis_type):
-#     dff = df[df['Country Name'] == hoverData['points'][0]['customdata']]
-#     dff = dff[dff['Indicator Name'] == yaxis_column_name]
-#     return create_time_series(dff, axis_type, yaxis_column_name)
-
-
 
 
 if __name__ == '__main__':
