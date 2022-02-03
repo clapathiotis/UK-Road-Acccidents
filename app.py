@@ -16,41 +16,43 @@ import pandas as pd
 from dash import dcc
 from dash import html
 
-# Create data
-print("Loading Data...")
+# Get data
+# print("Loading Data...")
 df = get_data()
 
 # topoJSON of UK Local authority Districts from http://martinjc.github.io/UK-GeoJSON/json/eng/topo_lad.json and https://github.com/martinjc/UK-GeoJSON/blob/master/json/administrative/gb/lad.json
+
 uk_local = json.load(open("lad.json","r"))
+
+# Create a dictionary of the the counties and their code tag
 counties_map = dict()
 for feature in uk_local['features']:
     feature['id'] = feature['properties']['LAD13CD']
     counties_map[feature['properties']['LAD13NM']] = feature['id']
 
+# Add code tag of the counties as a column and index
 df['id'] = df['local_authority_district'].apply(lambda x: counties_map[x] if x in counties_map.keys() else pd.NA)
 df = df.dropna(subset=['id'])
 df.set_index('id', drop=False, inplace=True)
 df.index.rename('district_id', inplace=True)
 
-districts = [uk_local['features'][i]['properties']['LAD13NM'] for i in range(len(uk_local['features']))]
-
-districts2 = df['local_authority_district'].unique()
-
+# Aggregate the number of accidents per district and create a map figure
 df2 = df.groupby(['id', 'local_authority_district']).size().reset_index(name='Count')
-
 fig = px.choropleth(df2, locations='id', geojson=uk_local, color='Count', hover_data=['local_authority_district'], scope='europe')
 fig.update_geos(fitbounds='locations', visible=False)
+
+# Options for the dropdown menu between different columns for the user to select
 available_indicators = ['Count', 'Fatal Accidents Percentage']
 # Instantiate custom views
 app.layout = html.Div(children=[
     # All elements from the top of the page
+    # Add a loading icon for when we load data
     dcc.Loading(id = "loading-icon",
         fullscreen=True,
         children=[
             html.Div([
                 html.H2('UK Road Accident Analytics Tool Per Municipality', style={'textAlign': 'center'})
             ]),
-            html.Div([
             html.Div([
                 html.Center('Choose Between Total Amount of Accidents or Fatality Rate'),
                 dcc.Dropdown(
@@ -68,7 +70,7 @@ app.layout = html.Div(children=[
                     ),
             ],
             style={'display': 'inline-block', 'align' : 'left', 'float': 'left'})
-            ]),
+            ,
             html.Div([
                 
                 dcc.Graph(
@@ -111,36 +113,12 @@ app.layout = html.Div(children=[
 )
 
 @app.callback(
-    Output("histo2", "figure"), 
-    [Input("dist-marginal2", "value"),
-    Input("graph1", "clickData"),
-    Input('submit-val', 'n_clicks'),])
-def update_hist2(marginal2, clickData, n_clicks):
-    changed_id = [p['prop_id'] for p in callback_context.triggered][0]
-    if 'submit-val' in changed_id:
-        clickData = 'United Kingdom'
-    district = get_district(clickData)
-    df = get_data()
-    df = df[['accident_severity', 'time', 'number_of_casualties', 'local_authority_district']]
-    df['time'] = pd.to_datetime(df["time"], format = "%H:%M").dt.hour
-    df = df.sort_values('time')
-    if district != 'United Kingdom':
-        df = df[df["local_authority_district"] == district]
-    fig = px.histogram(df, x='time', y='number_of_casualties', color='accident_severity', hover_data=df.columns,
-                     title="Overlay Histogram with Number of Casualties and Accident Severity hourly in "+ district, marginal = marginal2, barmode = 'overlay', opacity=0.75, nbins=24, 
-                     labels={
-                     "number_of_casualties": "Number of Casualties",
-                     "time": "Time of Day (Hours)",
-                     "accident_severity": "Accident Severity"
-                 }, height=400, width = 750)
-    return fig
-
-@app.callback(
     Output("histo", "figure"), 
     [Input("dist-marginal", "value"), 
     Input("graph1", "clickData"),
     Input('submit-val', 'n_clicks'),])
 def update_hist(marginal, clickData, n_clicks):
+    # Update the histogram based on whether the user has selected another district or pressed the button to reset the graphs
     changed_id = [p['prop_id'] for p in callback_context.triggered][0]
     if 'submit-val' in changed_id:
         clickData = 'United Kingdom'
@@ -163,14 +141,43 @@ def update_hist(marginal, clickData, n_clicks):
     return fig
 
 @app.callback(
+    Output("histo2", "figure"), 
+    [Input("dist-marginal2", "value"),
+    Input("graph1", "clickData"),
+    Input('submit-val', 'n_clicks'),])
+def update_hist2(marginal2, clickData, n_clicks):
+    # Update the histogram based on whether the user has selected another district or pressed the button to reset the graphs
+    changed_id = [p['prop_id'] for p in callback_context.triggered][0]
+    if 'submit-val' in changed_id:
+        clickData = 'United Kingdom'
+    district = get_district(clickData)
+    df = get_data()
+    df = df[['accident_severity', 'time', 'number_of_casualties', 'local_authority_district']]
+    df['time'] = pd.to_datetime(df["time"], format = "%H:%M").dt.hour
+    df = df.sort_values('time')
+    if district != 'United Kingdom':
+        df = df[df["local_authority_district"] == district]
+    fig = px.histogram(df, x='time', y='number_of_casualties', color='accident_severity', hover_data=df.columns,
+                     title="Overlay Histogram with Number of Casualties and Accident Severity hourly in "+ district, marginal = marginal2, barmode = 'overlay', opacity=0.75, nbins=24, 
+                     labels={
+                     "number_of_casualties": "Number of Casualties",
+                     "time": "Time of Day (Hours)",
+                     "accident_severity": "Accident Severity"
+                 }, height=400, width = 750)
+    return fig
+
+
+@app.callback(
     Output('graph1', 'figure'),  
     Input('view', 'value'))
 def update_graph(view_value):
     if view_value == 'Count':
+        # If user has selected 'Count' in dropdown menu show the number of accidents per district
         fig = px.choropleth(df2, locations='id', geojson=uk_local, color='Count', hover_data=['local_authority_district'], scope='europe', title='Map for Total Number of Accidents per Municipality')
         fig.update_geos(fitbounds='locations', visible=False)
 
     elif view_value == 'Fatal Accidents Percentage':
+        # For each district get the percentage of accidents per severity of the accident and select only the fatal ones
         df3 = (df.groupby(['id','local_authority_district'])['accident_severity'].value_counts(normalize=True) * 100).reset_index(name="Percentage")
         df3 = df3.loc[df3['accident_severity'] == 'Fatal']
         df3.set_index('id', drop=False, inplace=True)
@@ -211,7 +218,7 @@ def get_z_values(clickData, df):
     return z
 
 def get_district(clickData):
-    print("Updating Data...")
+    # print("Updating Data...")
     if type(clickData) == str:
         district = clickData
     elif type(clickData['points'][0]['customdata']) == str:
@@ -226,6 +233,7 @@ def get_district(clickData):
     Input('submit-val', 'n_clicks'),
 ])   
 def update_heatmap(clickData, n_clicks):
+    # Update the histogram based on whether the user has selected another district or pressed the button to reset the graphs
     changed_id = [p['prop_id'] for p in callback_context.triggered][0]
     if 'submit-val' in changed_id:
         clickData = 'United Kingdom'
@@ -263,5 +271,5 @@ def update_heatmap(clickData, n_clicks):
 
 
 if __name__ == '__main__':
-    # app.run_server(debug=False, dev_tools_ui=False)
-    app.run_server(debug=True) # to check errors. Need to change later
+    app.run_server(debug=False, dev_tools_ui=False)
+    # app.run_server(debug=True) # to check errors. Need to change later

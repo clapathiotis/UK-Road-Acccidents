@@ -1,8 +1,8 @@
-# JBI100-example-app
+# JBI100 App - Group 44 2021-2022
+
 
 ## About this app
-
-You can use this as a basic template for your JBI100 visualization project.
+This app is a visualization tool built with Dash (https://plotly.com/dash/) using a dataset from the U.K. government (https://data.gov.uk/dataset/cb7ae6f0-4be6-4935-9277-47e5ce24a11f/road-safety-data) about the road accidents in the United Kingdom during 2020.
 
 ## Requirements
 
@@ -48,6 +48,9 @@ Run this app locally with:
 ```
 You will get a http link, open this in your browser to see the results. You can edit the code in any editor (e.g. Visual Studio Code) and if you save it you will see the results in the browser.
 
-## Resources
+## Members
 
-* [Dash](https://dash.plot.ly/)
+Christoforos Lapathiotis
+Thanos Papamichail
+Nikolaos Giannios
+Stavros Kannavas
