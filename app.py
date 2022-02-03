@@ -7,7 +7,7 @@ from jbi100_app.main import app
 from jbi100_app.views.menu import make_menu_layout
 from jbi100_app.views.scatterplot import Scatterplot
 
-from dash import html
+from dash import html, callback_context
 import plotly.express as px
 from dash.dependencies import Input, Output
 
@@ -58,11 +58,13 @@ app.layout = html.Div(children=[
                     options=[{'label': i, 'value': i} for i in available_indicators],
                     value='Count',
                 ),
-                html.Center('Click on a Municipality in order to update the other graphs and find correlations!'),
+                html.H6('Click on the button below to reset the other graphs and show data for all of the United Kingdom'),
+                html.Button('Reset graphs', id='submit-val', n_clicks=0),
+                html.H5('Click on any Municipality in order to update the other graphs and find correlations!'),
                 dcc.Graph(
                         id='graph1',
-                        clickData={'points': [{'customdata': 'North Somerset'}]},
-                        style = {'width': '120vh', 'height': '150vh'} 
+                        clickData={'points': [{'customdata': 'United Kingdom'}]},
+                        style = {'width': '90vh', 'height': '110vh'} 
                     ),
             ],
             style={'display': 'inline-block', 'align' : 'left', 'float': 'left'})
@@ -105,22 +107,27 @@ app.layout = html.Div(children=[
         type="graph"
         ),
     ],
-    # style = {'display' : 'inline-block', 'width' : '100%', 'height' : '100%'}
+    style = {'display' : 'inline-block', 'width' : '100%', 'height' : '100%', 'align': 'center'}
 )
 
 @app.callback(
     Output("histo2", "figure"), 
     [Input("dist-marginal2", "value"),
-    Input("graph1", "clickData")])
-def update_hist2(marginal2, clickData):
+    Input("graph1", "clickData"),
+    Input('submit-val', 'n_clicks'),])
+def update_hist2(marginal2, clickData, n_clicks):
+    changed_id = [p['prop_id'] for p in callback_context.triggered][0]
+    if 'submit-val' in changed_id:
+        clickData = 'United Kingdom'
     district = get_district(clickData)
     df = get_data()
     df = df[['accident_severity', 'time', 'number_of_casualties', 'local_authority_district']]
     df['time'] = pd.to_datetime(df["time"], format = "%H:%M").dt.hour
     df = df.sort_values('time')
-    df = df[df["local_authority_district"] == district]
+    if district != 'United Kingdom':
+        df = df[df["local_authority_district"] == district]
     fig = px.histogram(df, x='time', y='number_of_casualties', color='accident_severity', hover_data=df.columns,
-                     title="Overlay Histogram with Number of Casualties and Accident Severity hourly at "+ district, marginal = marginal2, barmode = 'overlay', opacity=0.75, nbins=24, 
+                     title="Overlay Histogram with Number of Casualties and Accident Severity hourly in "+ district, marginal = marginal2, barmode = 'overlay', opacity=0.75, nbins=24, 
                      labels={
                      "number_of_casualties": "Number of Casualties",
                      "time": "Time of Day (Hours)",
@@ -131,17 +138,22 @@ def update_hist2(marginal2, clickData):
 @app.callback(
     Output("histo", "figure"), 
     [Input("dist-marginal", "value"), 
-    Input("graph1", "clickData")])
-def update_hist(marginal, clickData):
+    Input("graph1", "clickData"),
+    Input('submit-val', 'n_clicks'),])
+def update_hist(marginal, clickData, n_clicks):
+    changed_id = [p['prop_id'] for p in callback_context.triggered][0]
+    if 'submit-val' in changed_id:
+        clickData = 'United Kingdom'
     district = get_district(clickData)
     df = get_data()
     df = df[["local_authority_district", "speed_limit", 'accident_severity', "number_of_casualties"]]
-    df = df[df["local_authority_district"] == district]
+    if district != 'United Kingdom':
+        df = df[df["local_authority_district"] == district]
     df = df[df["speed_limit"] != -1]
     df = df.sort_values('speed_limit')
     fig = px.histogram(
         df, x="speed_limit", y="number_of_casualties", color ='accident_severity',
-        marginal=marginal, range_x=[-1, 6], hover_data=df.columns, width = 700, height=400, title = "Stacked Histogram with Number of Casualties and Speed Correlation at "+ district,
+        marginal=marginal, range_x=[-1, 6], hover_data=df.columns, width = 700, height=400, title = "Stacked Histogram with Number of Casualties and Speed Correlation in "+ district,
         labels={
                      "speed_limit": "Road Speed Limit(mph)",
                      "number_of_casualties": "Amount of Casualties",
@@ -176,7 +188,8 @@ def update_graph(view_value):
 
 def get_z_values(clickData, df):
     district = get_district(clickData)
-    df = df[df['local_authority_district']==district]
+    if district != 'United Kingdom':
+        df = df[df['local_authority_district']==district]
     
     Dry_count = (df.road_surface_conditions == "Dry").sum()
     Wet_or_damp = (df.road_surface_conditions == "Wet or damp").sum()
@@ -199,7 +212,9 @@ def get_z_values(clickData, df):
 
 def get_district(clickData):
     print("Updating Data...")
-    if type(clickData['points'][0]['customdata']) == str:
+    if type(clickData) == str:
+        district = clickData
+    elif type(clickData['points'][0]['customdata']) == str:
         district = clickData['points'][0]['customdata']
     else:
         district = clickData['points'][0]['customdata'][0]
@@ -207,9 +222,13 @@ def get_district(clickData):
 
 @app.callback(
     Output('heatmap', 'figure'),  
-    [Input('graph1', 'clickData')
+    [Input('graph1', 'clickData'),
+    Input('submit-val', 'n_clicks'),
 ])   
-def update_heatmap(clickData):
+def update_heatmap(clickData, n_clicks):
+    changed_id = [p['prop_id'] for p in callback_context.triggered][0]
+    if 'submit-val' in changed_id:
+        clickData = 'United Kingdom'
     if (clickData is None):
         return {'data': []}
     else :
@@ -231,7 +250,7 @@ def update_heatmap(clickData):
                 'height': 485,
                 'width': 715,
                 
-                'title' : "Road Surface vs Lighting Conditions at " + district,
+                'title' : "Road Surface vs Lighting Conditions in " + district,
                 'xaxis': {'side':'bottom'},
                 'margin': {
                 	'l': 140,
