@@ -71,7 +71,12 @@ app.layout = html.Div(children=[
             ],
             style={'display': 'inline-block', 'align' : 'left', 'float': 'left'})
             ,
-            html.Div([
+             
+                     
+            ], 
+        type="graph"
+        ),
+        html.Div([
                 
                 dcc.Graph(
                     id='heatmap'
@@ -94,6 +99,14 @@ app.layout = html.Div(children=[
 
             html.Div([
                 dcc.Graph(id="histo2"),
+                html.P("Select time range:"),
+                dcc.RangeSlider(
+                    id='time-slider',
+                    min=0,
+                    max=24,
+                    step=1,
+                    value=[0, 23],
+                ),
                 html.P("Select Distribution:"),
                 dcc.RadioItems(
                     id='dist-marginal2',
@@ -101,13 +114,9 @@ app.layout = html.Div(children=[
                         for x in ['box', 'violin']],
                     value='box'
                 ),
-                html.H2("Choosing between Distributions can give a better view of the trends hourly or according to speed limit of the road.", style={'fontSize': 15}) 
+                html.H2("Choosing between Distributions can give a better view of the trends hourly or according to speed limit of the road.", style={'fontSize': 15})
             ],
-            style={'display': 'inline-block', 'width' : '50%', 'align' : 'right', 'margin' : '10px'}), 
-                     
-            ], 
-        type="graph"
-        ),
+            style={'display': 'inline-block', 'width' : '50%', 'align' : 'right', 'margin' : '10px'}),
     ],
     style = {'display' : 'inline-block', 'width' : '100%', 'height' : '100%', 'align': 'center'}
 )
@@ -144,8 +153,10 @@ def update_hist(marginal, clickData, n_clicks):
     Output("histo2", "figure"), 
     [Input("dist-marginal2", "value"),
     Input("graph1", "clickData"),
-    Input('submit-val', 'n_clicks'),])
-def update_hist2(marginal2, clickData, n_clicks):
+    Input('submit-val', 'n_clicks'),
+    Input('time-slider', 'value')
+    ])
+def update_hist2(marginal2, clickData, n_clicks, time_value):
     # Update the histogram based on whether the user has selected another district or pressed the button to reset the graphs
     changed_id = [p['prop_id'] for p in callback_context.triggered][0]
     if 'submit-val' in changed_id:
@@ -154,6 +165,7 @@ def update_hist2(marginal2, clickData, n_clicks):
     df = get_data()
     df = df[['accident_severity', 'time', 'number_of_casualties', 'local_authority_district']]
     df['time'] = pd.to_datetime(df["time"], format = "%H:%M").dt.hour
+    df = df.loc[(df['time'] >= time_value[0]) & (df['time'] <= time_value[1])]
     df = df.sort_values('time')
     if district != 'United Kingdom':
         df = df[df["local_authority_district"] == district]
