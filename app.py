@@ -5,7 +5,6 @@ from numpy import size
 from jbi100_app.data import get_data
 from jbi100_app.main import app
 from jbi100_app.views.menu import make_menu_layout
-from jbi100_app.views.scatterplot import Scatterplot
 
 from dash import html, callback_context
 import plotly.express as px
@@ -113,7 +112,7 @@ app.layout = html.Div(children=[
                         for x in ['box', 'violin']],
                     value='box'
                 ),
-                html.H2("Choosing between Distributions can give a better view of the trends hourly or according to speed limit of the road.", style={'fontSize': 15})
+                html.H2("Choosing between Distributions can give a better view of the trends hourly or according to speed limit of the road.", style={'fontSize': 16})
             ],
             style={'display': 'inline-block', 'width' : '35%', 'align' : 'right', 'margin' : '10px'}),
     ],
@@ -139,12 +138,14 @@ def update_hist(marginal, clickData, n_clicks):
     df = df.sort_values('speed_limit')
     fig = px.histogram(
         df, x="speed_limit", y="number_of_casualties", color ='accident_severity',
-        marginal=marginal, range_x=[-1, 6], hover_data=df.columns, width = 650, height=350, title = "Stacked Histogram with Number of Casualties and Speed Correlation in "+ district,
+        marginal=marginal, range_x=[-1, 6], hover_data=df.columns, width = 665, height=350,
         labels={
                      "speed_limit": "Road Speed Limit(mph)",
                      "number_of_casualties": "Amount of Casualties",
                      "accident_severity": "Accident Severity"
                  },)
+    fig.update_layout(title= 'Number of Casualties and Speed Limit<br>'+district, title_x=0.5)
+    
     return fig
 
 @app.callback(
@@ -168,12 +169,13 @@ def update_hist2(marginal2, clickData, n_clicks, time_value):
     if district != 'United Kingdom':
         df = df[df["local_authority_district"] == district]
     fig = px.histogram(df, x='time', y='number_of_casualties', color='accident_severity', hover_data=df.columns,
-                     title="Overlay Histogram with Number of Casualties and Accident Severity hourly in "+ district, marginal = marginal2, barmode = 'overlay', opacity=0.75, nbins=24, 
+                     marginal = marginal2, barmode = 'overlay', opacity=0.75, nbins=24, 
                      labels={
                      "number_of_casualties": "Number of Casualties",
                      "time": "Time of Day (Hours)",
                      "accident_severity": "Accident Severity"
-                 }, height=300, width = 650)
+                 }, height=300, width = 665)
+    fig.update_layout(title="Number of Casualties and Accident Severity hourly <br>"+ district, title_x=0.5)
     return fig
 
 
@@ -261,14 +263,14 @@ def update_heatmap(clickData, n_clicks):
                 'ygap': 2,
                 'reversescale': 'true',
                 'colorscale': 'z_values',
-                'colorbar': {"title": 'Accident count'},
+                'colorbar': {"title": 'Accident Count'},
                 'type': 'heatmap',
             }],
             'layout': {
                 'height': 380,
-                'width': 650,
+                'width': 665,
                 
-                'title' : "Road Surface vs Lighting Conditions in " + district,
+                'title' : "Accidents per Lighting and Road Surface Conditions in<br> " + district,
                 'xaxis': {'side':'bottom'},
                 'margin': {
                 	'l': 100,
