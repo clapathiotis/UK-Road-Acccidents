@@ -17,7 +17,6 @@ from dash import dcc
 from dash import html
 
 # Get data
-# print("Loading Data...")
 df = get_data()
 
 # topoJSON of UK Local authority Districts from http://martinjc.github.io/UK-GeoJSON/json/eng/topo_lad.json and https://github.com/martinjc/UK-GeoJSON/blob/master/json/administrative/gb/lad.json
@@ -58,18 +57,18 @@ app.layout = html.Div(children=[
                 dcc.Dropdown(
                     id='view',
                     options=[{'label': i, 'value': i} for i in available_indicators],
-                    value='Count',
+                    value='Count', style ={'width' : '750px'}
                 ),
-                html.H6('Click on the button below to reset the other graphs and show data for all of the United Kingdom'),
+                html.H6('Reset the graphs on the right and show all of UK data by clicking the button below.'),
                 html.Button('Reset graphs', id='submit-val', n_clicks=0),
                 html.H5('Click on any Municipality in order to update the other graphs and find correlations!'),
                 dcc.Graph(
                         id='graph1',
                         clickData={'points': [{'customdata': 'United Kingdom'}]},
-                        style = {'width': '90vh', 'height': '110vh'} 
+                        style = {'width': '110vh', 'height': '160vh'} 
                     ),
             ],
-            style={'display': 'inline-block', 'align' : 'left', 'float': 'left'})
+            style={'display': 'inline-block', 'align' : 'left', 'float': 'left', 'width' : '55%'})
             ,
              
                      
@@ -82,7 +81,7 @@ app.layout = html.Div(children=[
                     id='heatmap'
                 ),
             ], 
-            style={'display': 'inline-block', 'width' : '50%', 'align' : 'right', 'margin' : '10px'}),
+            style={'display': 'inline-block', 'width' : '35%', 'align' : 'right', 'margin' : '10px'}),
 
             html.Div([
                 dcc.Graph(id="histo"),
@@ -94,7 +93,7 @@ app.layout = html.Div(children=[
                     value='box'
                 )
             ],
-            style={'display': 'inline-block', 'width' : '50%', 'align' : 'right', 'margin' : '10px'}
+            style={'display': 'inline-block', 'width' : '35%', 'align' : 'right', 'margin' : '10px'}
             ),
 
             html.Div([
@@ -116,7 +115,7 @@ app.layout = html.Div(children=[
                 ),
                 html.H2("Choosing between Distributions can give a better view of the trends hourly or according to speed limit of the road.", style={'fontSize': 15})
             ],
-            style={'display': 'inline-block', 'width' : '50%', 'align' : 'right', 'margin' : '10px'}),
+            style={'display': 'inline-block', 'width' : '35%', 'align' : 'right', 'margin' : '10px'}),
     ],
     style = {'display' : 'inline-block', 'width' : '100%', 'height' : '100%', 'align': 'center'}
 )
@@ -140,13 +139,12 @@ def update_hist(marginal, clickData, n_clicks):
     df = df.sort_values('speed_limit')
     fig = px.histogram(
         df, x="speed_limit", y="number_of_casualties", color ='accident_severity',
-        marginal=marginal, range_x=[-1, 6], hover_data=df.columns, width = 700, height=400, title = "Stacked Histogram with Number of Casualties and Speed Correlation in "+ district,
+        marginal=marginal, range_x=[-1, 6], hover_data=df.columns, width = 650, height=350, title = "Stacked Histogram with Number of Casualties and Speed Correlation in "+ district,
         labels={
                      "speed_limit": "Road Speed Limit(mph)",
                      "number_of_casualties": "Amount of Casualties",
                      "accident_severity": "Accident Severity"
                  },)
-
     return fig
 
 @app.callback(
@@ -175,7 +173,7 @@ def update_hist2(marginal2, clickData, n_clicks, time_value):
                      "number_of_casualties": "Number of Casualties",
                      "time": "Time of Day (Hours)",
                      "accident_severity": "Accident Severity"
-                 }, height=400, width = 750)
+                 }, height=300, width = 650)
     return fig
 
 
@@ -267,16 +265,16 @@ def update_heatmap(clickData, n_clicks):
                 'type': 'heatmap',
             }],
             'layout': {
-                'height': 485,
-                'width': 715,
+                'height': 380,
+                'width': 650,
                 
                 'title' : "Road Surface vs Lighting Conditions in " + district,
                 'xaxis': {'side':'bottom'},
                 'margin': {
-                	'l': 140,
+                	'l': 100,
                 	'r': 100,
                 	'b': 120,
-                	't': 100
+                	't': 80
                 },
             },
         }
