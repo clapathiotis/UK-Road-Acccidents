@@ -1,4 +1,4 @@
-# JBI100 App - Group 44 2021-2022
+# UK Road Accidents - Group 44 2021-2022
 
 
 ## About this app
