@@ -54,3 +54,12 @@ Christoforos Lapathiotis
 Thanos Papamichail
 Nikolaos Giannios
 Stavros Kannavas
+
+## Screenshots
+![fatal](https://github.com/clapathiotis/UK-Road-Acccidents/assets/43289218/27501cdf-d20d-4244-857c-f2214a826bf3)
+![speed_limit_hist](https://github.com/clapathiotis/UK-Road-Acccidents/assets/43289218/58cb3335-13c3-4933-9fae-b97b701c73ab)
+![heatmap](https://github.com/clapathiotis/UK-Road-Acccidents/assets/43289218/4cfa9822-6a6b-4f71-90f6-f6601a5ff917)
+
+
+
+
